@@ -470,3 +470,7 @@ Los números entre corchetes remiten a `informes/diseno.auditoria2.md`.
    pudo, porque no está instalado. **L07 no se aprueba** sin un test que corra con `prlimit` real sobre un JPEG y
    un PNG válidos (→ ok) y truncados (→ 422). Si `vips` no arranca con ese límite, se sube a 1 GiB y se registra
    en el informe.
+
+## 14. Correcciones posteriores
+1. **§9.1 omitió `tipo_documento.vigencia_dias`** de la lista de columnas que admiten nulos. Los requisitos
+   (§2.3) la definen **opcional**, y mandan: es nullable (L02a).
