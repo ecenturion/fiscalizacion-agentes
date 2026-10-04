@@ -74,3 +74,16 @@ cd legajos && pnpm verificar && pnpm db:generate   # el segundo: "No schema chan
 9. `acceso_log` con `ip` nula y resultado `ip_invalida` → ok.
 
 Sin `any`. Sin commit ni push.
+
+### Nota de despacho (2do intento)
+El primer intento dejó `src/server/db/schema.ts` casi completo (238 líneas): **partí de ahí**, no lo reescribas. Se
+cortó porque **`rm` no está permitido** en tu entorno. No crees archivos de prueba sueltos (`test.js` y similares):
+para verificar, usá `pnpm verificar` y `pnpm db:generate`. Si te sobra un archivo, avisalo en el informe y el
+arquitecto lo borra.
+
+### Nota de despacho (3er intento, CODEX sombrero B)
+AGY se cortó dos veces. `src/server/db/schema.ts` ya tiene las tablas: **partí de ahí**, revisalo contra las reglas
+de arriba y completá lo que falte. **No toques `drizzle/0000_*`**: la migración nueva es `0001`. Faltan:
+- la migración 0001 generada, con los agregados SQL a mano (extensiones, trigram con `f_unaccent`, columna
+  generada `numero` si drizzle no la emite);
+- `test/schema.test.ts`.
