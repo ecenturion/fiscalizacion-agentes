@@ -120,3 +120,14 @@ falta exportar `crearContexto`. Sin `any`, sin `console.log`. Sin commit ni push
 CODEX se detuvo bien: `ErrorConflicto` tenía el código fijo. El arquitecto ya cambió `errores.ts`:
 `new ErrorConflicto(codigo?, mensaje?)` y `ErrorNoEncontrado` (404). **No hace falta tocar `errores.ts`.** Usá
 `ErrorNoEncontrado` en `verLegajo` en lugar de `ErrorValidacion('no_encontrado')`.
+
+### Nota de despacho (3er intento) — correcciones del arquitecto
+1. **El criterio horario estaba mal (error de la spec):** Paraguay usa UTC−3 todo el año desde 2024. El caso es
+   `now = 2026-12-31T23:30-03:00` → año 2026 (en UTC ya es 2027-01-01T02:30Z). Agregá además
+   `now = 2027-01-01T00:30-03:00` → 2027.
+2. **Se amplía el alcance a `test/schema.test.ts`**, sólo para mover su fixture de numeración a un año que ningún
+   otro test use (2099: `2099-0001` y `2099-12345`). Los tests de L05 que no prueban numeración usan un `now` fijo
+   en un año propio (por ejemplo 2091), para no ocupar los números de otros archivos.
+3. Las consultas de auditoría en los tests llevan `ORDER BY creado_en, id`.
+4. Agregá un test que fuerce el 23505 nativo dentro del servicio (por ejemplo, con dos transacciones que marcan
+   original en paralelo, saltando el lock con un `agregarCedula` original) y verifique `ErrorConflicto('original_existente')`.
