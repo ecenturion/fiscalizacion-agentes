@@ -9,9 +9,13 @@
 ## Alcance de archivos (todos nuevos, en `legajos/`)
 1. `package.json`:
    - nombre `legajos`, privado, `packageManager` pnpm 11, `engines.node` >= 22;
-   - **versiones exactas** (sin `^`): `next@15.5.27`, react/react-dom 19, typescript 5, `drizzle-orm`,
-     `drizzle-kit`, `postgres` (driver postgres.js), `zod`, `luxon`, `vitest`, `eslint` 9 + `eslint-config-next@15.5.27`,
-     `@types/*`;
+   - **versiones exactas** (sin `^`), ya resueltas por el arquitecto. **No consultes npm**: `npm info` no está
+     permitido y no hace falta.
+     - dependencias: `next@15.5.27`, `react@19.2.8`, `react-dom@19.2.8`, `drizzle-orm@0.45.3`, `postgres@3.4.9`,
+       `zod@4.1.13`, `luxon@3.7.2`;
+     - devDependencies: `drizzle-kit@0.31.11`, `typescript@5.9.3`, `vitest@3.2.7`, `tsx@4.23.15`, `eslint@9.39.5`,
+       `eslint-config-next@15.5.27`, `@eslint/eslintrc@3.3.7`, `@types/node@22.20.5`, `@types/react@19.2.18`,
+       `@types/react-dom@19.2.7`, `@types/luxon@3.7.6`;
    - scripts:
      - `dev`: `next dev -H 127.0.0.1`;
      - `build`;
