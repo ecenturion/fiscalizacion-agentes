@@ -1,0 +1,9 @@
+Veredicto: CAMBIOS
+
+- **ALTA — §9.3, estado:** el check `estado_nuevo_id IS DISTINCT FROM estado_anterior_id` rechaza también las interacciones sin cambio de estado (ambos NULL). Debe admitir ambos NULL o exigir ambos no nulos y distintos.
+- **ALTA — §9.4, solicitudes:** bloquear las solicitudes existentes no impide que otra transacción asigne una solicitud al documento anterior durante el reemplazo. Todas las asignaciones deben coordinarse mediante el mismo bloqueo del documento y validar su vigencia después de adquirirlo.
+- **ALTA — §9.16, backup:** mantenimiento en el guard no espera las mutaciones ya autorizadas ni detiene escrituras de sesión/auditoría en lecturas, scripts o limpieza. Falta detener y drenar todos los escritores durante `pg_dump` y `rsync`.
+- **Pendiente — §9.11, límite IP:** no define cuándo incrementa `fallos`. Incrementar antes de verificar cuenta también éxitos; hacerlo después permite verificaciones concurrentes sin reservar capacidad. Falta un protocolo explícito de admisión y contabilización.
+- **Pendiente — §9.13, streaming:** falta el límite total del cuerpo en la app, rechazar campos truncados y comprobar `truncated` en archivos; también coordinar cancelación y cierre de escrituras antes de limpiar temporales.
+- **Pendiente — §9.14, PDF:** un timeout no concreta límites de memoria ni garantiza interrumpir el parseo. Falta ejecución cancelable con límites efectivos de recursos.
+- **Pendiente — §9.15, recuperación:** la antigüedad de 24 h no garantiza que un archivo esté fuera de una operación activa. La limpieza debe coordinarse con publicaciones en curso y volver a comprobar referencias antes de borrar.

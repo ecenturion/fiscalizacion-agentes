@@ -1,4 +1,4 @@
-# Sistema de Legajos para Fiscalización — Requisitos v0.2
+# Sistema de Legajos para Fiscalización — Requisitos v0.3
 
 > Fuente: el pedido de Emilio y sus respuestas del 2026-10-04. Lo que no está acá **no se asume**:
 > va a "Preguntas abiertas".
@@ -39,8 +39,8 @@ Por cada cédula:
   residencia. Cada tipo define:
   - nombre;
   - si es **obligatorio**, para mostrar lo que falta en cada legajo;
-  - **vencimiento** en días, opcional. Cuenta desde la **fecha de expedición** que figura en el documento y que se
-    carga al subirlo. A partir de ahí se calcula "vigente" o "vencido" y se avisa;
+  - **vigencia** en días, opcional. Al cargar un documento se registra su **fecha de emisión**: vence en
+    emisión + vigencia. El aviso de "vencido" aparece **sólo al ver ese documento**: no hay listado ni emails;
   - si admite **varios archivos**: por ejemplo, una nota de 3 páginas como un documento con 3 archivos ordenados.
 - Formatos **PDF, JPG y PNG**, con un máximo de **20 MB por archivo**, validado por contenido y no sólo por extensión.
 - Subida de archivos. **La base guarda sólo el path**. Los archivos viven en una carpeta del mismo servidor
@@ -92,14 +92,16 @@ Despliegue en el servidor de la institución: a definir si es con Docker o con N
 - **Estados:** Detectado, Notificado, En trámite, Resuelto, Archivado.
 - **Tipos de interacción:** Se presentó, Notificación, Llamada, Entrega de documentos.
 - **Tipos de documento:** los del pedido, para confirmar: Nota (varios archivos), Certificado de nacimiento,
-  Certificado de casamiento, Certificado de vida (con vencimiento), Certificado de residencia (con vencimiento).
+  Certificado de casamiento, Certificado de vida, Certificado de residencia. La vigencia de cada uno la carga el admin; no hace falta definirla ahora.
 
-## 5. Preguntas abiertas (no bloquean empezar el modelo)
-1. **Servidor:** ¿qué sistema operativo tiene? ¿Se permite Docker? ¿Hay HTTPS interno? ¿Hay un proxy delante?
-   Esto define cómo se lee la IP real.
-2. **Vencimientos:** propuesta para v1: aviso en pantalla y listado de vencidos, sin emails.
-3. **Certificados de vida y residencia:** los días de vencimiento de cada uno.
-4. **Solicitudes:** propuesta: se solicita un **tipo** de documento. La solicitud queda "recibida" al cargar un
-   documento de ese tipo en el legajo, y vuelve a "pendiente" si ese documento se anula.
-5. **Catálogos en uso:** propuesta: se **desactivan**, no se borran. Si cambia el vencimiento o la obligatoriedad,
-   se aplica a todos los documentos, incluidos los que ya existen.
+## 5. Decisiones cerradas (2026-10-04)
+- **Servidor:** Ubuntu.
+- **Vencimientos:** sólo como aviso al ver el documento.
+- **Solicitudes:** se pide un **tipo** de documento. Queda "recibida" al cargar un documento de ese tipo y vuelve
+  a "pendiente" si ese documento se anula.
+- **Catálogos en uso:** se desactivan, no se borran. Un cambio de vigencia u obligatoriedad se aplica a todo,
+  incluido lo que ya existe.
+
+## 6. Pendiente de confirmar con la institución (no bloquea el desarrollo)
+- ¿Se permite Docker? ¿Hay HTTPS interno o un proxy propio?
+- Propuesta de base: Nginx delante como único punto de entrada, y la app escuchando sólo en `127.0.0.1`.

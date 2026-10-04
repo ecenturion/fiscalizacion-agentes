@@ -1,0 +1,4 @@
+Veredicto: CAMBIOS
+
+- **ALTA nueva — §11.3:** el límite de 512 MiB de memoria virtual impide arrancar Node en el entorno probado (v22.23.1): `Failed to reserve virtual memory for CodeRange`, salida 133 incluso sin validar archivos. Las cargas válidas terminarían en 422. Usar un límite de memoria mediante cgroup/contenedor y verificar PDF/JPEG/PNG válidos; V8 necesita reservas virtuales adicionales ([Node.js](https://nodejs.org/download/release/v22.21.0/docs/api/cli.html)).
+- **ALTA nueva — §11.1:** `pm2 pid legajos` devuelve `0` al detenerlo, no vacío; la condición especificada abortaría todos los backups. Comprobar estado `stopped`, ausencia de PID vivo y cero conexiones, distinguiendo errores de consulta ([PM2](https://github.com/Unitech/pm2/blob/master/lib/API/Extra.js#L136), [stop](https://github.com/Unitech/pm2/blob/master/lib/God/ActionMethods.js#L314)).

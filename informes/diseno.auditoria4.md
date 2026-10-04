@@ -1,0 +1,5 @@
+Veredicto: CAMBIOS
+
+- **ALTA — §10.3, backup:** `pm2 stop` no garantiza drenar requests: puede terminar con `SIGKILL`. Falta concretar el cierre ordenado y verificar que no queden transacciones escritoras antes del backup; si falla el drenaje, abortarlo. [PM2](https://pm2.keymetrics.io/docs/usage/signals-clean-restart/)
+- **Pendiente — §10.4, límite IP:** la devolución no identifica la ventana reservada. Un éxito tardío puede decrementar una ventana nueva y liberar cuota ajena. Vincular reserva y devolución a la misma ventana, con actualización atómica.
+- **Pendiente — §10.6, PDF:** `resourceLimits` limita el motor JS, pero excluye `ArrayBuffer` y memoria externa; persiste la falta de un límite efectivo de memoria. Usar aislamiento con límite total de memoria y terminación controlada. [Node.js](https://nodejs.org/download/release/v25.9.0/docs/api/worker_threads.html)
