@@ -131,3 +131,20 @@ CODEX se detuvo bien: `ErrorConflicto` tenía el código fijo. El arquitecto ya 
 3. Las consultas de auditoría en los tests llevan `ORDER BY creado_en, id`.
 4. Agregá un test que fuerce el 23505 nativo dentro del servicio (por ejemplo, con dos transacciones que marcan
    original en paralelo, saltando el lock con un `agregarCedula` original) y verifique `ErrorConflicto('original_existente')`.
+
+### Nota de despacho (4to intento) — años de test asignados (regla fija, reemplaza el punto 2 de la nota anterior)
+Cada archivo crea legajos **sólo** en sus años:
+
+| Archivo | Años | Uso |
+|---|---|---|
+| `test/triggers.test.ts` | 2099 | ya está; no se toca |
+| `test/schema.test.ts` | **2098** | mover su fixture: `2098-0001` y `2098-12345` |
+| `test/legajos.test.ts` | 2090–2094 | numeración secuencial, concurrencia, año nuevo |
+| `test/cedulas.test.ts` | 2095–2097 | |
+
+- **El test de Asunción** (`now` = `2026-12-31T23:30-03:00` → 2026 y `2027-01-01T00:30-03:00` → 2027) **sólo
+  verifica `anio`**, no el correlativo, porque 2026 y 2027 pueden tener otros legajos.
+- Todo lo demás pasa un `now` fijo dentro de su rango.
+
+Alcance de este intento: los archivos de L05 más `test/schema.test.ts`, **sólo** para el cambio de año. Si
+aparece otra colisión, resolvela dentro de estos rangos sin detenerte y anotala en el informe.

@@ -3,107 +3,43 @@
 **Estado:** BLOQUEADO
 **Implementador:** CODEX · sombrero B
 **Fecha:** 2026-10-04
+**Despacho:** tercer intento
 
-## Bloqueo de la spec
+## Bloqueo encontrado antes de editar código
 
-La spec exige simultáneamente calcular el año del instante actual en `America/Asuncion` con Luxon y obtener 2026 al inyectar `2026-12-31T23:30-04:00`. En el runtime disponible, ese instante corresponde a **2027-01-01 a las 00:30 en Asunción**, cuyo offset es -03:00.
+La nota del tercer despacho pide mover el fixture de `test/schema.test.ts` a un año que ningún otro test use y especifica **2099**, con los números `2099-0001` y `2099-12345`.
 
-La implementación convierte el instante a `America/Asuncion`; el test conserva el resultado 2026 exigido por la spec y falla. Forzar 2026 cambiaría la interpretación del instante o dejaría de respetar la zona indicada.
+Sin embargo, `test/triggers.test.ts:40–46` ya utiliza 2099: reserva un correlativo con un upsert e inserta un legajo dentro de una transacción que confirma. La consulta real de la base de tests confirma que **2099-0001 ya existe**. Mover schema a ese número produciría nuevamente el 23505 en la siembra y haría fallar sus 53 tests.
 
-Me detuve al comprobarlo, conforme a `legajos-agents/AGENTS.md` §4.9: «Si la spec es ambigua o contradictoria, detenete y reportá». No modifiqué el criterio ni sustituí la zona.
+Me detuve conforme a `legajos-agents/AGENTS.md` §4.9: «Si la spec es ambigua o contradictoria, detenete y reportá». `test/triggers.test.ts` tampoco está en el alcance autorizado; CODEX.md exige parar si hace falta tocar otro archivo.
 
-**Corrección propuesta para el arquitecto:** cambiar el ejemplo a `2026-12-31T23:30-03:00`. En ese caso el año de Asunción sigue siendo 2026 y en UTC ya es 2027. Alternativamente, conservar el instante -04:00 y exigir 2027. Hace falta resolver esta contradicción antes de continuar.
+Se solicitó aclaración: usar **2098 exclusivamente para schema** (no tiene filas en la consulta realizada), o ampliar el alcance para mover los fixtures de triggers a otro año. No llegó respuesta durante esta ejecución. No sustituí por cuenta propia el año explícito de la spec ni edité triggers.
 
-## Archivos creados y modificados
+## Archivos creados y modificados en esta ejecución
 
-Creados en `legajos/`:
+- Código: **ningún archivo creado ni modificado**.
+- Informe: `legajos-agents/informes/L05-legajos-y-cedulas.codex.informe.md`, actualizado con el bloqueo y la salida real de esta ejecución.
 
-- `src/server/uuid.ts`.
-- `src/server/servicios/legajos.ts`.
-- `src/server/servicios/cedulas.ts`.
-- `src/server/servicios/mapeo.ts`.
-- `test/legajos.test.ts`.
-- `test/cedulas.test.ts`.
+Al iniciar ya estaban presentes estos cambios de intentos anteriores:
 
-Modificados en `legajos/`:
+- Modificados: `src/server/errores.ts`, `src/server/login.ts`, `src/server/servicios/contratos.ts`.
+- Nuevos sin seguimiento: `src/server/uuid.ts`, `src/server/servicios/legajos.ts`, `src/server/servicios/cedulas.ts`, `src/server/servicios/mapeo.ts`, `test/legajos.test.ts`, `test/cedulas.test.ts`.
 
-- `src/server/login.ts`: extracción de UUIDv7 e importación desde `uuid.ts`; reexportación de compatibilidad para los tests y el CLI existentes.
-- `src/server/servicios/contratos.ts`: agregado de `editarLegajoEntrada`, su tipo y `editarLegajo` con salida `LegajoResumen`.
+Se conservaron todos. `errores.ts` contiene las correcciones del arquitecto. `legajos-agents/estado.jsonl` ya estaba modificado y no se tocó. No se hizo commit, push, despliegue ni movimiento de la tarea.
 
-Modificado en `legajos-agents/`:
+## Verificación del árbol existente
 
-- `informes/L05-legajos-y-cedulas.codex.informe.md`: reemplaza el informe del intento anterior.
-
-`src/server/errores.ts` **ya estaba modificado al iniciar** por la corrección indicada en la nota de despacho. No lo edité. No hice commit, push, despliegue ni movimiento de la tarea.
-
-## Implementación parcial y decisiones
-
-- Factories sin base global; cada método exige permiso, valida con Zod y usa una transacción con auditoría.
-- Numeración mediante upsert atómico, año con Luxon en Asunción, estado activo de menor orden y alta conjunta de legajo y cédulas.
-- Lecturas con aislamiento repeatable read para mantener consistentes el detalle y el total paginado.
-- Relacionados por cédulas vivas mediante EXISTS, sin duplicar legajos; detalle con cédulas anuladas y TODO(L06/L07) explícito.
-- Búsqueda combinable con AND, sin acentos y con escape de porcentajes, guiones bajos y barras invertidas.
-- Consultas de búsqueda y relacionados generan registros de vista con filtros e IDs devueltos, incluso si el resultado está vacío.
-- Ediciones con columnas explícitas; campos opcionales omitidos conservan su valor y null los vacía. El estado del legajo no se actualiza.
-- Las mutaciones de cédulas bloquean primero el legajo para coordinar también las altas concurrentes. Marcar original bloquea además las cédulas vivas con FOR UPDATE y audita el desmarcado y el marcado.
-- Anulación conserva la marca histórica de original, mientras el índice parcial y las operaciones consideran originales sólo las cédulas vivas.
-- Traducción de 23505 de `cedula_original_unq` a `ErrorConflicto('original_existente')`, incluyendo errores envueltos por Drizzle en cause.
-- Contextos de tests obtenidos mediante `requerirSesion` con dependencias inyectadas y sesiones reales. Servicios ejecutados como `legajos_app`; owner sólo siembra fixtures y cierra sus sesiones.
-- UUIDv7 mantiene la exportación previa en login para evitar modificar consumidores fuera del alcance.
-- Los tests eligen años libres para los casos de numeración 1..10, sin borrar fixtures ni reiniciar contadores existentes.
-
-## Pendientes y limitaciones
-
-1. Resolver el criterio horario contradictorio.
-2. Corregir el orden de las consultas de auditoría de los tests nuevos: usan `registros[0]` / `registros[1]` sin ORDER BY. En la corrida focalizada fallaron dos aserciones por este motivo; en la verificación completa falló una. Es un defecto de los tests escritos en este intento, pendiente de corrección tras resolver la spec.
-3. Evitar que los fixtures persistentes de L05 ocupen `2026-0001`, que `test/schema.test.ts:51` inserta dentro de su transacción de fixture. Las nuevas altas confirmadas produjeron esta colisión y los 53 tests de schema fallaron al sembrar. `schema.test.ts` está fuera del alcance y no se modificó; corresponde aislar los fixtures de L05 o ampliar el alcance para corregir el fixture existente.
-4. La traducción del 23505 está implementada, pero aún falta un test que fuerce el error nativo dentro del servicio. Los tests de concurrencia comprueban el conflicto del servicio y la unicidad final.
-5. Completar la verificación satisfactoria y el build. La implementación queda parcial y sin aprobación; no la presento como terminada ni como auditoría de mi propio código.
-
-## Evidencia del instante
-
-Comando ejecutado en `legajos/`:
-
-```sh
-node --input-type=module -e 'import { DateTime } from "luxon"; const instante = DateTime.fromISO("2026-12-31T23:30:00-04:00", { setZone: true }); console.info(JSON.stringify({entrada: instante.toISO(), utc: instante.toUTC().toISO(), asuncion: instante.setZone("America/Asuncion").toISO(), anioAsuncion: instante.setZone("America/Asuncion").year, node: process.version, icu: process.versions.icu, tz: process.versions.tz}, null, 2));'
-```
-
-Salida real (código 0):
-
-```text
-{
-  "entrada": "2026-12-31T23:30:00.000-04:00",
-  "utc": "2027-01-01T03:30:00.000Z",
-  "asuncion": "2027-01-01T00:30:00.000-03:00",
-  "anioAsuncion": 2027,
-  "node": "v22.23.1",
-  "icu": "78.2",
-  "tz": "2025c"
-}
-```
-
-## Verificación obligatoria
-
-Comando solicitado: `cd legajos && pnpm verificar`.
-
-Al iniciar, `pnpm typecheck` y `pnpm --version` fallaron con:
-
-```text
-[ERROR] unable to open database file
-```
-
-Se ejecutó la verificación con configuración de proceso que permite usar el store dentro del repositorio, sin editar configuración ni agregar dependencias:
-
-```sh
-cd legajos
-PNPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false PNPM_CONFIG_STORE_DIR=/home/ecenturion/develop/legajos/node_modules/.store pnpm verificar
-```
+Comando ejecutado: `cd legajos && pnpm verificar`.
 
 **Código de salida: 1.**
 
-Lint y typecheck finalizaron satisfactoriamente. Vitest: **219 aprobados, 55 fallidos, 274 en total**. El build no se ejecutó porque la cadena se detuvo en los tests.
+- Lint y typecheck terminaron con éxito.
+- Vitest: **219 aprobados, 55 fallidos, 274 en total**.
+- El build no se ejecutó porque la cadena terminó en los tests.
+- Los fallos del código heredado son: un caso horario que todavía usa UTC−4 y exige 2026, una aserción de auditoría sin orden, y 53 tests de schema que colisionan con el fixture confirmado de 2026.
+- Esta ejecución no constituye una auditoría ni una aprobación de la implementación anterior.
 
-Salida real completa, concatenada de las respuestas del proceso:
+Salida real completa del comando, concatenada de las respuestas del proceso:
 
 ```text
 $ pnpm lint && pnpm typecheck && pnpm test && pnpm build
@@ -143,55 +79,43 @@ Aplicando migraciones...
   routine: 'transformCreateStmt'
 }
 Migraciones aplicadas
- ❯ test/legajos.test.ts (17 tests | 1 failed) 368ms
-   ✓ Legajos contra Postgres real como legajos_app > usa el rol app sin heredar owner 2ms
-   ✓ Legajos contra Postgres real como legajos_app > dos legajos empiezan en AAAA-0001 y AAAA-0002 17ms
-   ✓ Legajos contra Postgres real como legajos_app > 10 altas concurrentes reservan correlativos 1..10 sin repetidos 71ms
+ ❯ test/legajos.test.ts (17 tests | 1 failed) 294ms
+   ✓ Legajos contra Postgres real como legajos_app > usa el rol app sin heredar owner 1ms
+   ✓ Legajos contra Postgres real como legajos_app > dos legajos empiezan en AAAA-0001 y AAAA-0002 16ms
+   ✓ Legajos contra Postgres real como legajos_app > 10 altas concurrentes reservan correlativos 1..10 sin repetidos 70ms
    ✓ Legajos contra Postgres real como legajos_app > el primer legajo del año siguiente vuelve al correlativo 1 5ms
-   × Legajos contra Postgres real como legajos_app > usa el año de Asunción aunque el instante en UTC ya sea 2027 10ms
+   × Legajos contra Postgres real como legajos_app > usa el año de Asunción aunque el instante en UTC ya sea 2027 11ms
      → expected 2027 to be 2026 // Object.is equality
-   ✓ Legajos contra Postgres real como legajos_app > rechaza sin cédulas y con dos originales antes de escribir 2ms
+   ✓ Legajos contra Postgres real como legajos_app > rechaza sin cédulas y con dos originales antes de escribir 3ms
    ✓ Legajos contra Postgres real como legajos_app > audita el legajo y todas sus cédulas y devuelve UUIDv7 y fechas ISO 8ms
-   ✓ Legajos contra Postgres real como legajos_app > relaciona sin duplicar y sólo por números de cédulas vivas 35ms
+   ✓ Legajos contra Postgres real como legajos_app > relaciona sin duplicar y sólo por números de cédulas vivas 31ms
    ✓ Legajos contra Postgres real como legajos_app > encuentra José buscando jose, por prefijo y con filtros combinados AND 16ms
-   ✓ Legajos contra Postgres real como legajos_app > trata % como literal en la búsqueda 15ms
+   ✓ Legajos contra Postgres real como legajos_app > trata % como literal en la búsqueda 14ms
    ✓ Legajos contra Postgres real como legajos_app > trata _ como literal en la búsqueda 14ms
-   ✓ Legajos contra Postgres real como legajos_app > trata \ como literal en la búsqueda 16ms
-   ✓ Legajos contra Postgres real como legajos_app > pagina con total exacto, sin duplicados y de más nuevo a más antiguo 86ms
-   ✓ Legajos contra Postgres real como legajos_app > audita vistas y consultas incluso sin resultados 13ms
-   ✓ Legajos contra Postgres real como legajos_app > consulta no crea ni edita; el guard entrega el contexto sin elevar permisos 5ms
-   ✓ Legajos contra Postgres real como legajos_app > editarLegajo preserva estado y campos omitidos; el grant bloquea cambios de estado 11ms
+   ✓ Legajos contra Postgres real como legajos_app > trata \ como literal en la búsqueda 15ms
+   ✓ Legajos contra Postgres real como legajos_app > pagina con total exacto, sin duplicados y de más nuevo a más antiguo 22ms
+   ✓ Legajos contra Postgres real como legajos_app > audita vistas y consultas incluso sin resultados 11ms
+   ✓ Legajos contra Postgres real como legajos_app > consulta no crea ni edita; el guard entrega el contexto sin elevar permisos 4ms
+   ✓ Legajos contra Postgres real como legajos_app > editarLegajo preserva estado y campos omitidos; el grant bloquea cambios de estado 10ms
    ✓ Legajos contra Postgres real como legajos_app > ver inexistente devuelve 404 y valida los UUID y el paginado 2ms
- ❯ test/cedulas.test.ts (13 tests | 1 failed) 209ms
+ ❯ test/cedulas.test.ts (13 tests | 1 failed) 202ms
    ✓ Cédulas contra Postgres real como legajos_app > usa legajos_app sin pertenecer a owner 1ms
    ✓ Cédulas contra Postgres real como legajos_app > permite repetir un número en el mismo legajo y audita el alta 19ms
-   ✓ Cédulas contra Postgres real como legajos_app > agregar una segunda original devuelve 409 sin desmarcar ni auditar un alta 12ms
-   ✓ Cédulas contra Postgres real como legajos_app > marcarOriginal cambia ambas filas con antes/después y dos auditorías 14ms
-   ✓ Cédulas contra Postgres real como legajos_app > dos cambios concurrentes con original inicial=true dejan exactamente una 21ms
-   ✓ Cédulas contra Postgres real como legajos_app > dos cambios concurrentes con original inicial=false dejan exactamente una 15ms
+   ✓ Cédulas contra Postgres real como legajos_app > agregar una segunda original devuelve 409 sin desmarcar ni auditar un alta 11ms
+   ✓ Cédulas contra Postgres real como legajos_app > marcarOriginal cambia ambas filas con antes/después y dos auditorías 13ms
+   ✓ Cédulas contra Postgres real como legajos_app > dos cambios concurrentes con original inicial=true dejan exactamente una 22ms
+   ✓ Cédulas contra Postgres real como legajos_app > dos cambios concurrentes con original inicial=false dejan exactamente una 13ms
    ✓ Cédulas contra Postgres real como legajos_app > dos altas originales concurrentes tienen un éxito y un conflicto 12ms
-   ✓ Cédulas contra Postgres real como legajos_app > alta y marcado concurrentes preservan una sola original 14ms
-   × Cédulas contra Postgres real como legajos_app > editar sólo modifica los campos autorizados y preserva los opcionales omitidos 20ms
+   ✓ Cédulas contra Postgres real como legajos_app > alta y marcado concurrentes preservan una sola original 11ms
+   × Cédulas contra Postgres real como legajos_app > editar sólo modifica los campos autorizados y preserva los opcionales omitidos 19ms
      → expected { Object (antes, despues) } to match object { antes: { nombres: 'Ana' }, …(1) }
 (13 matching properties omitted from actual)
-   ✓ Cédulas contra Postgres real como legajos_app > anular la original deja el legajo sin original viva y permite marcar otra 18ms
+   ✓ Cédulas contra Postgres real como legajos_app > anular la original deja el legajo sin original viva y permite marcar otra 17ms
    ✓ Cédulas contra Postgres real como legajos_app > anular exige motivo y rechaza editar, marcar o anular una cédula ya anulada 12ms
-   ✓ Cédulas contra Postgres real como legajos_app > consulta no crea ni edita ni marca; operador no anula 9ms
-   ✓ Cédulas contra Postgres real como legajos_app > valida cada entrada y devuelve 404 para IDs inexistentes 4ms
- ✓ test/login.test.ts (14 tests) 3631ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > cinco fallos bloquean; la clave correcta no pasa hasta +16 minutos  369ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > inexistente usa señuelo, con mediana de cinco muestras a menos del 30%  447ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > 20 fallos por IP, el 21 no verifica ni modifica cuenta; ventana vencida reinicia  934ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > 25 concurrentes desde una IP: sólo 20 verifican argon2  890ms
- ✓ test/logout-y-cli.test.ts (12 tests) 2863ms
-   ✓ Logout y recuperación administrativa > CLI imprime una clave de 16 caracteres una vez, agrega IPv6 y cierra todas las sesiones  528ms
-   ✓ Logout y recuperación administrativa > CLI normaliza IPv4-mapped y agrega /32  350ms
-   ✓ Logout y recuperación administrativa > CLI rechaza usuario no admin, sin modificaciones ni clave en stdout  345ms
-   ✓ Logout y recuperación administrativa > CLI rechaza legajos online y acepta la aplicación detenida  749ms
-   ✓ Logout y recuperación administrativa > CLI falla si el lock está ocupado  342ms
- ✓ test/auth-guard.test.ts (40 tests) 161ms
- ❯ test/schema.test.ts (53 tests | 53 failed) 82ms
-   × Tablas y constraints de legajos (legajos_owner) > conecta como legajos_owner 20ms
+   ✓ Cédulas contra Postgres real como legajos_app > consulta no crea ni edita ni marca; operador no anula 8ms
+   ✓ Cédulas contra Postgres real como legajos_app > valida cada entrada y devuelve 404 para IDs inexistentes 3ms
+ ❯ test/schema.test.ts (53 tests | 53 failed) 80ms
+   × Tablas y constraints de legajos (legajos_owner) > conecta como legajos_owner 19ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > genera 2026-0001 y conserva los cinco dígitos de 2026-12345 2ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
@@ -223,7 +147,7 @@ Migraciones aplicadas
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, true, false) 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, false, true) 1ms
+   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, false, true) 2ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, true, false) 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
@@ -235,7 +159,7 @@ Migraciones aplicadas
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > acepta las tres columnas completas 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, false, false) 1ms
+   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, false, false) 2ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, true, false) 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
@@ -291,15 +215,27 @@ Migraciones aplicadas
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > acepta ip nula para un acceso con resultado ip_invalida 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > todas las FK aplican ON DELETE RESTRICT 2ms
+   × Tablas y constraints de legajos (legajos_owner) > todas las FK aplican ON DELETE RESTRICT 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > los UUID no tienen DEFAULT y la nulabilidad coincide con §9.1 1ms
+   × Tablas y constraints de legajos (legajos_owner) > los UUID no tienen DEFAULT y la nulabilidad coincide con §9.1 2ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
    × Tablas y constraints de legajos (legajos_owner) > las extensiones y el índice trigram usan el esquema legajos 1ms
      → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
- ✓ test/triggers.test.ts (21 tests) 114ms
- ✓ test/permisos.test.ts (29 tests) 38ms
- ✓ test/humo.test.ts (3 tests) 21ms
+ ✓ test/login.test.ts (14 tests) 3634ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > cinco fallos bloquean; la clave correcta no pasa hasta +16 minutos  371ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > inexistente usa señuelo, con mediana de cinco muestras a menos del 30%  444ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > 20 fallos por IP, el 21 no verifica ni modifica cuenta; ventana vencida reinicia  936ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > 25 concurrentes desde una IP: sólo 20 verifican argon2  889ms
+ ✓ test/logout-y-cli.test.ts (12 tests) 2819ms
+   ✓ Logout y recuperación administrativa > CLI imprime una clave de 16 caracteres una vez, agrega IPv6 y cierra todas las sesiones  487ms
+   ✓ Logout y recuperación administrativa > CLI normaliza IPv4-mapped y agrega /32  347ms
+   ✓ Logout y recuperación administrativa > CLI rechaza usuario no admin, sin modificaciones ni clave en stdout  347ms
+   ✓ Logout y recuperación administrativa > CLI rechaza legajos online y acepta la aplicación detenida  746ms
+   ✓ Logout y recuperación administrativa > CLI falla si el lock está ocupado  346ms
+ ✓ test/auth-guard.test.ts (40 tests) 153ms
+ ✓ test/triggers.test.ts (21 tests) 111ms
+ ✓ test/permisos.test.ts (29 tests) 39ms
+ ✓ test/humo.test.ts (3 tests) 22ms
  ✓ test/ip.test.ts (24 tests) 7ms
  ✓ test/permisos.unit.test.ts (48 tests) 4ms
 
@@ -424,10 +360,54 @@ PostgresError: duplicate key value violates unique constraint "legajo_anio_corre
 
  Test Files  3 failed | 8 passed (11)
       Tests  55 failed | 219 passed (274)
-   Start at  16:39:47
-   Duration  12.03s (transform 184ms, setup 0ms, collect 1.71s, tests 7.50s, environment 1ms, prepare 419ms)
+   Start at  16:44:59
+   Duration  11.88s (transform 187ms, setup 0ms, collect 1.71s, tests 7.37s, environment 1ms, prepare 413ms)
 
  ELIFECYCLE  Test failed. See above for more details.
  ELIFECYCLE  Command failed with exit code 1.
 
 ```
+
+## Evidencia adicional del año ocupado
+
+Comando ejecutado en `legajos/`:
+
+```sh
+node --input-type=module <<'JS'
+import postgres from 'postgres';
+const app = postgres(process.env.TEST_APP_URL || 'postgres://legajos_app@localhost:55433/legajos_test');
+try {
+  const filas = await app`SELECT anio, correlativo, numero FROM legajos.legajo WHERE anio IN (2098, 2099) ORDER BY anio, correlativo`;
+  process.stdout.write(JSON.stringify(filas, null, 2) + '\n');
+} finally {
+  await app.end();
+}
+JS
+```
+
+Salida real (código 0):
+
+```text
+[
+  {
+    "anio": 2099,
+    "correlativo": 1,
+    "numero": "2099-0001"
+  },
+  {
+    "anio": 2099,
+    "correlativo": 2,
+    "numero": "2099-0002"
+  }
+]
+
+```
+
+## Pendientes para completar L05
+
+1. Resolver la asignación exclusiva del año de schema y su alcance.
+2. Aplicar las correcciones autorizadas del tercer despacho: UTC−3 antes y después del cambio a 2027, años fijos propios para los tests que no prueban numeración, y `ORDER BY creado_en, id` en sus consultas de auditoría.
+3. Agregar un test contra Postgres real que fuerce el 23505 de `cedula_original_unq` dentro del servicio y compruebe `ErrorConflicto('original_existente')`.
+4. Completar la implementación y ejecutar nuevamente `pnpm verificar` hasta obtener la verificación completa.
+
+Las correcciones horarias y de auditoría del tercer despacho son claras; el bloqueo actual es exclusivamente la asignación de **2099** ya utilizada por otro archivo.
