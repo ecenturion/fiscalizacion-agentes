@@ -97,7 +97,7 @@
 13. **`test/permisos.unit.test.ts`**: la matriz completa, rol por permiso, contra una tabla escrita en el test.
 
 ### Dependencias
-`ipaddr.js` (versión exacta 2.2.0). Ya están `zod` y `postgres`.
+`ipaddr.js` (versión exacta 2.5.0). Ya están `zod` y `postgres`.
 
 ## Criterios
 ```
