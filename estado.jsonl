@@ -22,3 +22,6 @@
 {"ts":"2026-10-04T16:42:48-03:00","tarea":"L05-legajos-y-cedulas","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-04T16:48:32-03:00","tarea":"L05-legajos-y-cedulas","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-04T16:57:09-03:00","tarea":"L05-legajos-y-cedulas","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-04T16:57:35-03:00","tarea":"L06-interacciones","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-04T16:57:35-03:00","tarea":"L06-interacciones","estado":"en_progreso","agente":"codex"}
+{"ts":"2026-10-04T17:12:23-03:00","tarea":"L06-interacciones","estado":"hecho","agente":"claude-code"}
