@@ -115,3 +115,8 @@ Los tests cubren:
 
 Los `Contexto` se obtienen con `requerirSesion` y las deps inyectadas, como en `auth-guard.test.ts`. No hace
 falta exportar `crearContexto`. Sin `any`, sin `console.log`. Sin commit ni push.
+
+### Nota de despacho (2do intento)
+CODEX se detuvo bien: `ErrorConflicto` tenía el código fijo. El arquitecto ya cambió `errores.ts`:
+`new ErrorConflicto(codigo?, mensaje?)` y `ErrorNoEncontrado` (404). **No hace falta tocar `errores.ts`.** Usá
+`ErrorNoEncontrado` en `verLegajo` en lugar de `ErrorValidacion('no_encontrado')`.
