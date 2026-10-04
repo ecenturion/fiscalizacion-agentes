@@ -1,45 +1,55 @@
 # Informe — L05-legajos-y-cedulas
 
-**Estado:** BLOQUEADO
+**Estado:** COMPLETADO
 **Implementador:** CODEX · sombrero B
 **Fecha:** 2026-10-04
-**Despacho:** tercer intento
+**Despacho:** cuarto intento
 
-## Bloqueo encontrado antes de editar código
+## Trabajo realizado
 
-La nota del tercer despacho pide mover el fixture de `test/schema.test.ts` a un año que ningún otro test use y especifica **2099**, con los números `2099-0001` y `2099-12345`.
+Se completó la implementación presente de intentos anteriores y se aplicaron las correcciones de la última spec. Los servicios usan factories con base inyectada, permisos mediante `exigir`, validación Zod y auditoría dentro de la transacción.
 
-Sin embargo, `test/triggers.test.ts:40–46` ya utiliza 2099: reserva un correlativo con un upsert e inserta un legajo dentro de una transacción que confirma. La consulta real de la base de tests confirma que **2099-0001 ya existe**. Mover schema a ese número produciría nuevamente el 23505 en la siembra y haría fallar sus 53 tests.
+- Numeración mediante upsert atómico, año de Asunción con Luxon y reloj inyectable; estado inicial activo de menor orden.
+- Alta conjunta de legajo y cédulas; edición del legajo limitada a fecha de detección y observación.
+- Detalle con cédulas anuladas, originales primero, relacionados sin duplicados por números vivos y `TODO(L06/L07)`.
+- Búsqueda con filtros AND, prefijo de cédula, unaccent, escape de caracteres LIKE, paginado y total exacto. Las lecturas utilizan repeatable read para mantener una misma instantánea.
+- Mutaciones de cédulas con columnas explícitas, rechazo de anuladas y traducción del 23505 de `cedula_original_unq` a `ErrorConflicto('original_existente')`.
+- Tests contra Postgres real como `legajos_app`, con contextos obtenidos por `requerirSesion` y dependencias inyectadas.
 
-Me detuve conforme a `legajos-agents/AGENTS.md` §4.9: «Si la spec es ambigua o contradictoria, detenete y reportá». `test/triggers.test.ts` tampoco está en el alcance autorizado; CODEX.md exige parar si hace falta tocar otro archivo.
+## Archivos
 
-Se solicitó aclaración: usar **2098 exclusivamente para schema** (no tiene filas en la consulta realizada), o ampliar el alcance para mover los fixtures de triggers a otro año. No llegó respuesta durante esta ejecución. No sustituí por cuenta propia el año explícito de la spec ni edité triggers.
+Archivos nuevos en el diff de L05, ya presentes al iniciar:
+- `src/server/uuid.ts`
+- `src/server/servicios/legajos.ts`
+- `src/server/servicios/cedulas.ts`
+- `src/server/servicios/mapeo.ts`
+- `test/legajos.test.ts`
+- `test/cedulas.test.ts`
 
-## Archivos creados y modificados en esta ejecución
+Archivos modificados en el diff de L05:
+- `src/server/login.ts`: extracción e importación de UUIDv7; reexportación para conservar los consumidores existentes.
+- `src/server/servicios/contratos.ts`: entrada, tipo y firma de `editarLegajo`.
+- `test/schema.test.ts`: exclusivamente el año del fixture y sus aserciones, de 2026 a 2098.
 
-- Código: **ningún archivo creado ni modificado**.
-- Informe: `legajos-agents/informes/L05-legajos-y-cedulas.codex.informe.md`, actualizado con el bloqueo y la salida real de esta ejecución.
+En esta ejecución se modificaron únicamente `test/legajos.test.ts`, `test/cedulas.test.ts`, `test/schema.test.ts` y este informe. Los servicios, UUID y contratos heredados se conservaron tras leerlos y verificar la tarea.
 
-Al iniciar ya estaban presentes estos cambios de intentos anteriores:
+`src/server/errores.ts` ya estaba modificado por el arquitecto; no se tocó. `legajos-agents/estado.jsonl` también tenía cambios previos y se conservó.
 
-- Modificados: `src/server/errores.ts`, `src/server/login.ts`, `src/server/servicios/contratos.ts`.
-- Nuevos sin seguimiento: `src/server/uuid.ts`, `src/server/servicios/legajos.ts`, `src/server/servicios/cedulas.ts`, `src/server/servicios/mapeo.ts`, `test/legajos.test.ts`, `test/cedulas.test.ts`.
+## Decisiones
 
-Se conservaron todos. `errores.ts` contiene las correcciones del arquitecto. `legajos-agents/estado.jsonl` ya estaba modificado y no se tocó. No se hizo commit, push, despliegue ni movimiento de la tarea.
+- Años asignados: 2090 para numeración secuencial, 2091 para diez altas concurrentes, 2092 para el primer legajo del año siguiente, 2094 para los demás tests de legajos, 2095 para los tests de cédulas y 2098 para schema. No se modificó triggers.
+- El caso horario usa `2026-12-31T23:30-03:00` y `2027-01-01T00:30-03:00`; sólo exige los años 2026 y 2027.
+- Las consultas de filas de auditoría se ordenan por `creado_en, id`.
+- La prueba del 23505 usa una conexión real como app que marca una cédula original sin confirmar y omite el bloqueo del legajo del servicio. El alta no ve esa original en su SELECT, pero su INSERT espera el índice único. Se comprueba la espera con `pg_blocking_pids`, se confirma la escritura competidora y se verifica el error traducido, sin nueva cédula ni auditoría. No hay mocks de la base.
+- Se conserva el bloqueo adicional del legajo en las mutaciones de cédulas: serializa altas y cambios de original incluso cuando todavía no existe una original viva.
 
-## Verificación del árbol existente
+## Verificación
 
-Comando ejecutado: `cd legajos && pnpm verificar`.
+Comando: `cd legajos && pnpm verificar`.
 
-**Código de salida: 1.**
+**Código de salida: 0.** Lint, typecheck, los **275 tests en 11 archivos** y build finalizaron correctamente.
 
-- Lint y typecheck terminaron con éxito.
-- Vitest: **219 aprobados, 55 fallidos, 274 en total**.
-- El build no se ejecutó porque la cadena terminó en los tests.
-- Los fallos del código heredado son: un caso horario que todavía usa UTC−4 y exige 2026, una aserción de auditoría sin orden, y 53 tests de schema que colisionan con el fixture confirmado de 2026.
-- Esta ejecución no constituye una auditoría ni una aprobación de la implementación anterior.
-
-Salida real completa del comando, concatenada de las respuestas del proceso:
+Salida real completa del comando:
 
 ```text
 $ pnpm lint && pnpm typecheck && pnpm test && pnpm build
@@ -79,335 +89,91 @@ Aplicando migraciones...
   routine: 'transformCreateStmt'
 }
 Migraciones aplicadas
- ❯ test/legajos.test.ts (17 tests | 1 failed) 294ms
-   ✓ Legajos contra Postgres real como legajos_app > usa el rol app sin heredar owner 1ms
-   ✓ Legajos contra Postgres real como legajos_app > dos legajos empiezan en AAAA-0001 y AAAA-0002 16ms
-   ✓ Legajos contra Postgres real como legajos_app > 10 altas concurrentes reservan correlativos 1..10 sin repetidos 70ms
-   ✓ Legajos contra Postgres real como legajos_app > el primer legajo del año siguiente vuelve al correlativo 1 5ms
-   × Legajos contra Postgres real como legajos_app > usa el año de Asunción aunque el instante en UTC ya sea 2027 11ms
-     → expected 2027 to be 2026 // Object.is equality
-   ✓ Legajos contra Postgres real como legajos_app > rechaza sin cédulas y con dos originales antes de escribir 3ms
-   ✓ Legajos contra Postgres real como legajos_app > audita el legajo y todas sus cédulas y devuelve UUIDv7 y fechas ISO 8ms
-   ✓ Legajos contra Postgres real como legajos_app > relaciona sin duplicar y sólo por números de cédulas vivas 31ms
-   ✓ Legajos contra Postgres real como legajos_app > encuentra José buscando jose, por prefijo y con filtros combinados AND 16ms
-   ✓ Legajos contra Postgres real como legajos_app > trata % como literal en la búsqueda 14ms
-   ✓ Legajos contra Postgres real como legajos_app > trata _ como literal en la búsqueda 14ms
-   ✓ Legajos contra Postgres real como legajos_app > trata \ como literal en la búsqueda 15ms
-   ✓ Legajos contra Postgres real como legajos_app > pagina con total exacto, sin duplicados y de más nuevo a más antiguo 22ms
-   ✓ Legajos contra Postgres real como legajos_app > audita vistas y consultas incluso sin resultados 11ms
-   ✓ Legajos contra Postgres real como legajos_app > consulta no crea ni edita; el guard entrega el contexto sin elevar permisos 4ms
-   ✓ Legajos contra Postgres real como legajos_app > editarLegajo preserva estado y campos omitidos; el grant bloquea cambios de estado 10ms
-   ✓ Legajos contra Postgres real como legajos_app > ver inexistente devuelve 404 y valida los UUID y el paginado 2ms
- ❯ test/cedulas.test.ts (13 tests | 1 failed) 202ms
-   ✓ Cédulas contra Postgres real como legajos_app > usa legajos_app sin pertenecer a owner 1ms
-   ✓ Cédulas contra Postgres real como legajos_app > permite repetir un número en el mismo legajo y audita el alta 19ms
-   ✓ Cédulas contra Postgres real como legajos_app > agregar una segunda original devuelve 409 sin desmarcar ni auditar un alta 11ms
-   ✓ Cédulas contra Postgres real como legajos_app > marcarOriginal cambia ambas filas con antes/después y dos auditorías 13ms
-   ✓ Cédulas contra Postgres real como legajos_app > dos cambios concurrentes con original inicial=true dejan exactamente una 22ms
-   ✓ Cédulas contra Postgres real como legajos_app > dos cambios concurrentes con original inicial=false dejan exactamente una 13ms
-   ✓ Cédulas contra Postgres real como legajos_app > dos altas originales concurrentes tienen un éxito y un conflicto 12ms
-   ✓ Cédulas contra Postgres real como legajos_app > alta y marcado concurrentes preservan una sola original 11ms
-   × Cédulas contra Postgres real como legajos_app > editar sólo modifica los campos autorizados y preserva los opcionales omitidos 19ms
-     → expected { Object (antes, despues) } to match object { antes: { nombres: 'Ana' }, …(1) }
-(13 matching properties omitted from actual)
-   ✓ Cédulas contra Postgres real como legajos_app > anular la original deja el legajo sin original viva y permite marcar otra 17ms
-   ✓ Cédulas contra Postgres real como legajos_app > anular exige motivo y rechaza editar, marcar o anular una cédula ya anulada 12ms
-   ✓ Cédulas contra Postgres real como legajos_app > consulta no crea ni edita ni marca; operador no anula 8ms
-   ✓ Cédulas contra Postgres real como legajos_app > valida cada entrada y devuelve 404 para IDs inexistentes 3ms
- ❯ test/schema.test.ts (53 tests | 53 failed) 80ms
-   × Tablas y constraints de legajos (legajos_owner) > conecta como legajos_owner 19ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > genera 2026-0001 y conserva los cinco dígitos de 2026-12345 2ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza un (anio, correlativo) duplicado 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza dos cédulas originales vivas del mismo legajo 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > permite otra original cuando la anterior está anulada 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza el número de cédula 12a 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (true, false, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (false, true, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (false, false, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (true, true, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (true, false, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (false, true, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza un motivo con sólo espacios 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > acepta las tres columnas completas 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, false, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, true, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, false, true) 2ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, true, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, false, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, true, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza un motivo con sólo espacios 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de documento > acepta las tres columnas completas 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, false, false) 2ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, true, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, false, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, true, false) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, false, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, true, true) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza un motivo con sólo espacios 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > acepta las tres columnas completas 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza la nota vacía "" 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza la nota vacía "  " 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza sólo estado_nuevo_id 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza sólo estado_anterior_id 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza ambos estados iguales 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta ambos estados nulos 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta ambos estados distintos 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta un tipo sin vigencia (requisitos §2.3: es opcional) 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza vigencia_dias = 0 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza Prueba y prueba en estado_legajo 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza Prueba y prueba en tipo_interaccion 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza Prueba y prueba en tipo_documento 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza archivos image/gif 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza el orden repetido en un documento 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza un path_relativo repetido aunque cambie el orden 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta un archivo application/pdf 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta un archivo image/jpeg 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta un archivo image/png 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > rechaza dos versiones que apuntan al mismo documento 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > acepta ip nula para un acceso con resultado ip_invalida 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > todas las FK aplican ON DELETE RESTRICT 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > los UUID no tienen DEFAULT y la nulabilidad coincide con §9.1 2ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
-   × Tablas y constraints de legajos (legajos_owner) > las extensiones y el índice trigram usan el esquema legajos 1ms
-     → duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
- ✓ test/login.test.ts (14 tests) 3634ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > cinco fallos bloquean; la clave correcta no pasa hasta +16 minutos  371ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > inexistente usa señuelo, con mediana de cinco muestras a menos del 30%  444ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > 20 fallos por IP, el 21 no verifica ni modifica cuenta; ventana vencida reinicia  936ms
-   ✓ Login y cambio de clave con Postgres real como legajos_app > 25 concurrentes desde una IP: sólo 20 verifican argon2  889ms
- ✓ test/logout-y-cli.test.ts (12 tests) 2819ms
-   ✓ Logout y recuperación administrativa > CLI imprime una clave de 16 caracteres una vez, agrega IPv6 y cierra todas las sesiones  487ms
-   ✓ Logout y recuperación administrativa > CLI normaliza IPv4-mapped y agrega /32  347ms
-   ✓ Logout y recuperación administrativa > CLI rechaza usuario no admin, sin modificaciones ni clave en stdout  347ms
-   ✓ Logout y recuperación administrativa > CLI rechaza legajos online y acepta la aplicación detenida  746ms
-   ✓ Logout y recuperación administrativa > CLI falla si el lock está ocupado  346ms
- ✓ test/auth-guard.test.ts (40 tests) 153ms
- ✓ test/triggers.test.ts (21 tests) 111ms
+ ✓ test/legajos.test.ts (17 tests) 291ms
+stdout | test/cedulas.test.ts > Cédulas contra Postgres real como legajos_app > traduce el 23505 nativo del índice de original y revierte el alta
+{
+  severity_local: 'WARNING',
+  severity: 'WARNING',
+  code: '25P01',
+  message: 'there is no transaction in progress',
+  file: 'xact.c',
+  line: '4131',
+  routine: 'UserAbortTransactionBlock'
+}
+
+ ✓ test/cedulas.test.ts (14 tests) 220ms
+ ✓ test/schema.test.ts (53 tests) 123ms
+ ✓ test/login.test.ts (14 tests) 3618ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > cinco fallos bloquean; la clave correcta no pasa hasta +16 minutos  366ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > inexistente usa señuelo, con mediana de cinco muestras a menos del 30%  445ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > 20 fallos por IP, el 21 no verifica ni modifica cuenta; ventana vencida reinicia  925ms
+   ✓ Login y cambio de clave con Postgres real como legajos_app > 25 concurrentes desde una IP: sólo 20 verifican argon2  882ms
+ ✓ test/logout-y-cli.test.ts (12 tests) 2805ms
+   ✓ Logout y recuperación administrativa > CLI imprime una clave de 16 caracteres una vez, agrega IPv6 y cierra todas las sesiones  484ms
+   ✓ Logout y recuperación administrativa > CLI normaliza IPv4-mapped y agrega /32  349ms
+   ✓ Logout y recuperación administrativa > CLI rechaza usuario no admin, sin modificaciones ni clave en stdout  343ms
+   ✓ Logout y recuperación administrativa > CLI rechaza legajos online y acepta la aplicación detenida  743ms
+   ✓ Logout y recuperación administrativa > CLI falla si el lock está ocupado  341ms
+ ✓ test/auth-guard.test.ts (40 tests) 162ms
+ ✓ test/triggers.test.ts (21 tests) 107ms
  ✓ test/permisos.test.ts (29 tests) 39ms
  ✓ test/humo.test.ts (3 tests) 22ms
  ✓ test/ip.test.ts (24 tests) 7ms
  ✓ test/permisos.unit.test.ts (48 tests) 4ms
 
-⎯⎯⎯⎯⎯⎯ Failed Tests 55 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  11 passed (11)
+      Tests  275 passed (275)
+   Start at  16:52:06
+   Duration  11.89s (transform 183ms, setup 0ms, collect 1.70s, tests 7.40s, environment 1ms, prepare 410ms)
 
- FAIL  test/cedulas.test.ts > Cédulas contra Postgres real como legajos_app > editar sólo modifica los campos autorizados y preserva los opcionales omitidos
-AssertionError: expected { Object (antes, despues) } to match object { antes: { nombres: 'Ana' }, …(1) }
-(13 matching properties omitted from actual)
+$ next build
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /home/ecenturion/pnpm-lock.yaml as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /home/ecenturion/develop/legajos/pnpm-lock.yaml
 
-- Expected
-+ Received
+   ▲ Next.js 15.5.27
 
-  {
-    "antes": {
--     "nombres": "Ana",
-+     "nombres": "María",
-    },
-    "despues": {
-      "nombres": "María",
-    },
-  }
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 1969ms
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/6) ...
+   Generating static pages (1/6) 
+   Generating static pages (2/6) 
+   Generating static pages (4/6) 
+ ✓ Generating static pages (6/6)
+   Finalizing page optimization ...
+   Collecting build traces ...
 
- ❯ test/cedulas.test.ts:156:26
-    154|     const registros = await app`SELECT antes, despues FROM legajos.aud…
-    155|     expect(registros).toHaveLength(2);
-    156|     expect(registros[0]).toMatchObject({ antes: { nombres: 'Ana' }, de…
-       |                          ^
-    157|     const prohibida = { cedulaId: c.id, nombres: 'María', apellidos: '…
-    158|     await expect(cedulas.editarCedula(operador, prohibida)).rejects.to…
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/55]⎯
-
- FAIL  test/legajos.test.ts > Legajos contra Postgres real como legajos_app > usa el año de Asunción aunque el instante en UTC ya sea 2027
-AssertionError: expected 2027 to be 2026 // Object.is equality
-
-- Expected
-+ Received
-
-- 2026
-+ 2027
-
- ❯ test/legajos.test.ts:103:25
-    101|     expect(now.toUTC().year).toBe(2027);
-    102|     const salida = await crearServiciosLegajos(db, { now: () => now })…
-    103|     expect(salida.anio).toBe(2026);
-       |                         ^
-    104|     expect(salida.numero).toMatch(/^2026-[0-9]{4,}$/);
-    105|   });
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/55]⎯
-
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > conecta como legajos_owner
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > genera 2026-0001 y conserva los cinco dígitos de 2026-12345
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza un (anio, correlativo) duplicado
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza dos cédulas originales vivas del mismo legajo
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > permite otra original cuando la anterior está anulada
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza el número de cédula 12a
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (true, false, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (false, true, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (false, false, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (true, true, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (true, false, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza la combinación parcial (false, true, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > rechaza un motivo con sólo espacios
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de cedula > acepta las tres columnas completas
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, false, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, true, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, false, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, true, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (true, false, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza la combinación parcial (false, true, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > rechaza un motivo con sólo espacios
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de documento > acepta las tres columnas completas
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, false, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, true, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, false, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, true, false)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (true, false, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza la combinación parcial (false, true, true)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > rechaza un motivo con sólo espacios
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > Anulación de interaccion > acepta las tres columnas completas
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza la nota vacía ""
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza la nota vacía "  "
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza sólo estado_nuevo_id
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza sólo estado_anterior_id
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza ambos estados iguales
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta ambos estados nulos
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta ambos estados distintos
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta un tipo sin vigencia (requisitos §2.3: es opcional)
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza vigencia_dias = 0
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza Prueba y prueba en estado_legajo
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza Prueba y prueba en tipo_interaccion
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza Prueba y prueba en tipo_documento
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza archivos image/gif
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza el orden repetido en un documento
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza un path_relativo repetido aunque cambie el orden
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta un archivo application/pdf
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta un archivo image/jpeg
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta un archivo image/png
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > rechaza dos versiones que apuntan al mismo documento
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > acepta ip nula para un acceso con resultado ip_invalida
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > todas las FK aplican ON DELETE RESTRICT
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > los UUID no tienen DEFAULT y la nulabilidad coincide con §9.1
- FAIL  test/schema.test.ts > Tablas y constraints de legajos (legajos_owner) > las extensiones y el índice trigram usan el esquema legajos
-PostgresError: duplicate key value violates unique constraint "legajo_anio_correlativo_unq"
- ❯ ErrorResponse node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:815:30
- ❯ handle node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:489:6
- ❯ Socket.data node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/connection.js:324:9
- ❯ cachedError node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/query.js:170:23
- ❯ new Query node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/query.js:36:24
- ❯ sql node_modules/.pnpm/postgres@3.4.9/node_modules/postgres/src/index.js:112:11
- ❯ test/schema.test.ts:51:11
-     49|       VALUES (${base.tipoDocumento}, 'Documento de prueba', false, 365…
-     50|     `;
-     51|     await tx`
-       |           ^
-     52|       INSERT INTO legajos.legajo (id, anio, correlativo, fecha_detecci…
-     53|       VALUES (${base.legajo}, 2026, 1, '2026-01-01', ${base.estado}, $…
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/55]⎯
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      139 B         103 kB
+├ ○ /_not-found                            996 B         104 kB
+├ ƒ /cuenta/clave                          139 B         103 kB
+├ ƒ /legajos                               139 B         103 kB
+├ ○ /login                                 688 B         104 kB
+└ ƒ /logout                                139 B         103 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/758-942e49721ce48ac0.js       46.5 kB
+  ├ chunks/d36d6ee9-817a06892149dc1d.js  54.4 kB
+  └ other shared chunks (total)          1.87 kB
 
 
- Test Files  3 failed | 8 passed (11)
-      Tests  55 failed | 219 passed (274)
-   Start at  16:44:59
-   Duration  11.88s (transform 187ms, setup 0ms, collect 1.71s, tests 7.37s, environment 1ms, prepare 413ms)
+ƒ Middleware                             34.1 kB
 
- ELIFECYCLE  Test failed. See above for more details.
- ELIFECYCLE  Command failed with exit code 1.
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
 
 ```
 
-## Evidencia adicional del año ocupado
+Comprobación adicional: `git diff --check` terminó con código 0 y sin salida.
 
-Comando ejecutado en `legajos/`:
+## Limitaciones y pendientes
 
-```sh
-node --input-type=module <<'JS'
-import postgres from 'postgres';
-const app = postgres(process.env.TEST_APP_URL || 'postgres://legajos_app@localhost:55433/legajos_test');
-try {
-  const filas = await app`SELECT anio, correlativo, numero FROM legajos.legajo WHERE anio IN (2098, 2099) ORDER BY anio, correlativo`;
-  process.stdout.write(JSON.stringify(filas, null, 2) + '\n');
-} finally {
-  await app.end();
-}
-JS
-```
-
-Salida real (código 0):
-
-```text
-[
-  {
-    "anio": 2099,
-    "correlativo": 1,
-    "numero": "2099-0001"
-  },
-  {
-    "anio": 2099,
-    "correlativo": 2,
-    "numero": "2099-0002"
-  }
-]
-
-```
-
-## Pendientes para completar L05
-
-1. Resolver la asignación exclusiva del año de schema y su alcance.
-2. Aplicar las correcciones autorizadas del tercer despacho: UTC−3 antes y después del cambio a 2027, años fijos propios para los tests que no prueban numeración, y `ORDER BY creado_en, id` en sus consultas de auditoría.
-3. Agregar un test contra Postgres real que fuerce el 23505 de `cedula_original_unq` dentro del servicio y compruebe `ErrorConflicto('original_existente')`.
-4. Completar la implementación y ejecutar nuevamente `pnpm verificar` hasta obtener la verificación completa.
-
-Las correcciones horarias y de auditoría del tercer despacho son claras; el bloqueo actual es exclusivamente la asignación de **2099** ya utilizada por otro archivo.
+- Documentos e interacciones permanecen vacíos con el TODO solicitado para L06/L07.
+- Los fixtures confirmados son append-only. Las aserciones de numeración desde 1 requieren que 2090–2092 estén libres al iniciar la suite; esta verificación se ejecutó con esa condición.
+- PostgreSQL emitió un aviso no fatal porque el finally de la prueba del conflicto intenta ROLLBACK tras el COMMIT. Next.js emitió su aviso de varios lockfiles. Se incluyen ambos en la salida real; ninguno impidió la verificación.
+- No quedaron criterios pendientes de L05. La auditoría y la aprobación corresponden al arquitecto y a AGY; este informe es de implementación.
+- No se hizo commit, push, despliegue ni movimiento de la tarea.
