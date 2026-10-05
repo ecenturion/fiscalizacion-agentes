@@ -172,3 +172,11 @@ Sin `any`, sin `console.log`, `.set()` explícito. Sin commit ni push.
    'POST', body: Readable.toWeb(stream) as ReadableStream<Uint8Array>, duplex: 'half' } as RequestInit &
    { duplex: 'half' })`. Si no tipa, explicá por qué en el informe.
 6. Verificá con `cd legajos && pnpm verificar` hasta exit 0.
+
+### Corrección 2 (reintento final, CODEX sombrero B)
+AGY se cortó dos veces. En el segundo intento un `sed` global (`tipo_id` → `tipo_documento_id`) rompió
+`test/documentos.test.ts`, que hoy no parsea. Tomá como base `src/server/servicios/documentos.ts`, las rutas y
+el mapeo que dejó, revisalos contra la spec y corregí lo que no cumpla. **Podés reescribir los dos archivos de
+test desde cero.** Tienen que cubrir **todos** los criterios de la spec y de la Corrección 1, uno por caso.
+`cargarDocumentos`, si hace falta exportarla para `verLegajo`, está bien. Verificá con
+`cd legajos && pnpm verificar` hasta exit 0.
