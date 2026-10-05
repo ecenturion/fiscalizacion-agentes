@@ -474,3 +474,19 @@ Los números entre corchetes remiten a `informes/diseno.auditoria2.md`.
 ## 14. Correcciones posteriores
 1. **§9.1 omitió `tipo_documento.vigencia_dias`** de la lista de columnas que admiten nulos. Los requisitos
    (§2.3) la definen **opcional**, y mandan: es nullable (L02a).
+
+## 15. Despliegue real (2026-10-05) — reemplaza §4
+Servidor `192.168.5.104`: CentOS 7, kernel 3.10, glibc 2.17, 1 CPU y 1 GB. Comparte con Apache/PHP en el 80 y
+con PostgreSQL 13, que tiene otras bases y no se usa.
+- **Docker 26.1.4**. `container-selinux` vino de vault.centos.org porque los mirrors de *extras* ya no existen.
+  App en `fiscalizacion:<sha>` (Node 22, qpdf 11.3, vips 8.14, uid 10001) y **`postgres:16-bookworm`**:
+  alpine falla por seccomp en el kernel 3.10.
+- **Apache 2.4.6** con `mod_ssl`, certificado autofirmado con SAN `IP:192.168.5.104` (hasta 2031) en
+  `/etc/pki/fiscalizacion/`, `Include conf.d/fiscalizacion.inc` dentro del vhost 443 y
+  `conf.d/fiscalizacion-redirect.conf` para que sólo `/fiscalizacion` pase del 80 al 443.
+  - Respaldo: `conf.d/ssl.conf.antes-fiscalizacion`.
+  - `X-Real-IP` vía `SetEnvIf Remote_Addr`, porque 2.4.6 no tiene `expr=`.
+- Datos en `/srv/fiscalizacion/{pgdata,archivos,.env}`. El `.env` se generó en el servidor (600) y sus claves
+  nunca salieron de ahí.
+- firewalld: se agregó `https`. Efecto colateral: el sitio PHP también responde por HTTPS con el mismo contenido.
+- Deploy: `scripts/deploy.sh` desde la PC: build local, `docker save | ssh docker load` y `compose up`.
