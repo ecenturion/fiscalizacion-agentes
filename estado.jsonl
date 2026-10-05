@@ -65,3 +65,6 @@
 {"ts":"2026-10-05T16:16:30-03:00","tarea":"M3-pantallas-v2","estado":"en_progreso","agente":"claude-code"}
 {"ts":"2026-10-05T16:16:30-03:00","tarea":"M3-pantallas-v2","estado":"en_progreso","agente":"opencode"}
 {"ts":"2026-10-05T16:43:28-03:00","tarea":"M3-pantallas-v2","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-05T17:10:15-03:00","tarea":"M4-catalogos-operativos","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-05T17:10:15-03:00","tarea":"M4-catalogos-operativos","estado":"en_progreso","agente":"codex"}
+{"ts":"2026-10-05T17:22:51-03:00","tarea":"M4-catalogos-operativos","estado":"hecho","agente":"claude-code"}
