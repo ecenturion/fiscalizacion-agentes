@@ -46,3 +46,6 @@
 {"ts":"2026-10-05T09:43:19-03:00","tarea":"L08b-pantallas-operacion","estado":"en_progreso","agente":"claude-code"}
 {"ts":"2026-10-05T09:43:19-03:00","tarea":"L08b-pantallas-operacion","estado":"en_progreso","agente":"opencode"}
 {"ts":"2026-10-05T10:13:56-03:00","tarea":"L08b-pantallas-operacion","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-05T10:14:03-03:00","tarea":"L11a-deploy-docker","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-05T10:14:03-03:00","tarea":"L11a-deploy-docker","estado":"en_progreso","agente":"codex"}
+{"ts":"2026-10-05T10:42:52-03:00","tarea":"L11a-deploy-docker","estado":"hecho","agente":"claude-code"}
