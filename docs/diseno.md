@@ -538,3 +538,56 @@ con PostgreSQL 13, que tiene otras bases y no se usa.
   de trámite inicial.
 - Antes de aplicarla en producción: `pg_dump`. La migración **falla a propósito** si encuentra filas en `legajo`,
   `cedula`, `documento` o `interaccion`, como red de seguridad.
+
+### 16.4 Cierre de la auditoría del modelo v2 (manda sobre §16.1–§16.3)
+**Decisiones de Emilio (2026-10-05):**
+- **Número de cédula normalizado:** sólo dígitos y **sin ceros a la izquierda** (`0001234567` = `1234567`), tanto
+  al guardar como al buscar. `UNIQUE` global y nunca parcial.
+- **El legajo no se anula.** Si el número es incorrecto, **lo corrige el admin** (permiso `legajo.corregir_cedula`,
+  con motivo y auditoría). Si choca con un legajo existente, da 409.
+- **Faltantes:** satisface **cualquier documento vivo** del tipo en un legajo vinculado (vivo), sin importar de qué
+  trámite vino. **Vencido sí satisface**: el aviso se ve sólo en el visor.
+- **Desvincular** (sólo admin, con motivo):
+  - los documentos quedan en el legajo con su `tramite_id` **histórico**;
+  - las solicitudes de ese trámite satisfechas por documentos de ese legajo **vuelven a pendiente** (se pone
+    `documento_recibido_id = null`), con auditoría y en la misma transacción.
+- **"Múltiple cedulación"** se siembra **sin** documentos obligatorios hasta que llegue la lista.
+- En la UI, un trámite sin original marcada muestra **"Original sin determinar"**. No se rotula a todos como duplicados.
+
+**Integridad (auditoría de codex):**
+1. **Un candado por trámite.** Vincular, desvincular, marcar original, registrar interacción, asignar solicitud y
+   subir con `tramite_id` hacen **primero** `SELECT … FROM tramite WHERE id = $1 FOR UPDATE`. Después leen o
+   recuentan y recién entonces escriben. Orden global de locks: trámite → documento(s) por id → solicitud(es) por id.
+2. **Procedencia:** `documento.tramite_id` es **inmutable** (sin grant de UPDATE) y se valida **al cargar**: el
+   vínculo tiene que estar vivo, bajo el candado del trámite. Una desvinculación posterior no lo invalida.
+   **Reemplazo:** la versión nueva **hereda** el `tramite_id` del anterior y se admite aunque el vínculo ya no esté
+   vivo (es histórico). Un reemplazo nuevo desde otro trámite crea un documento nuevo, no una versión.
+3. **Solicitudes:** un trigger valida que la interacción sea del mismo trámite y que el documento sea del mismo
+   tipo, de un legajo vinculado y esté **vivo**. Ahora `SELECT … FOR SHARE` del documento; antes aceptaba anulados.
+4. **Unicidad:**
+   - `tramite_legajo`: único `(tramite_id, legajo_id)` donde `anulado_en IS NULL`, original única por trámite viva
+     y check de las tres columnas de anulación;
+   - **revincular** un vínculo anulado crea una fila nueva;
+   - **alta concurrente de un legajo** por número: `INSERT … ON CONFLICT (cedula) DO NOTHING` y después `SELECT`
+     del existente.
+5. **Migración 0003, en este orden:**
+   1. red de seguridad: `RAISE` si hay filas en `legajo`, `cedula`, `documento`, `interaccion`,
+      `solicitud_documento`, `documento_archivo` o `contador_legajo`, o algún `tipo_documento.obligatorio = true`;
+   2. `DROP TRIGGER` de interacción/estado, solicitud y versión;
+   3. `DROP` de constraints e índices dependientes, explícitos y **sin `CASCADE`**;
+   4. `DROP TABLE cedula` y `contador_legajo`;
+   5. en `legajo`: `DROP COLUMN numero` (la generada) y después `anio`, `correlativo`, `estado_id` y
+      `fecha_deteccion`; `ADD` de `cedula`, `nombres`, `apellidos` y demás;
+   6. crear `tipo_tramite`, `tipo_tramite_documento`, `contador_tramite`, `tramite` y `tramite_legajo`;
+   7. en `interaccion` y `solicitud_documento`: `DROP` de la FK, `RENAME legajo_id TO tramite_id` y una FK nueva a
+      `tramite`;
+   8. `documento.tramite_id`;
+   9. `tipo_documento DROP COLUMN obligatorio`;
+   10. triggers nuevos (`SECURITY DEFINER` sólo el de estado; `search_path` fijo; `EXECUTE` revocado);
+   11. **grants explícitos** para cada tabla nueva o modificada, con UPDATE por columna mínimo. Sin UPDATE en:
+       `tramite.estado_id`, `tramite.numero/anio/correlativo`, `documento.tramite_id/legajo_id/tipo_id/version_de`,
+       `tramite_legajo.tramite_id/legajo_id` y `legajo.cedula`. La corrección de la cédula usa una función
+       `SECURITY DEFINER` `legajos.corregir_cedula(legajo, nueva, usuario, motivo, ip)`, que audita;
+   12. seed de "Múltiple cedulación" con UUID fijo.
+
+   Todo en **una transacción**. Antes, en producción: app detenida y `pg_dump`.
