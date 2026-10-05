@@ -1,4 +1,4 @@
-# Sistema de Legajos para Fiscalización — Requisitos v0.3
+# Fiscalización — Requisitos v0.3
 
 > Fuente: el pedido de Emilio y sus respuestas del 2026-10-04. Lo que no está acá **no se asume**:
 > va a "Preguntas abiertas".

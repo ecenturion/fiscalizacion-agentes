@@ -17,7 +17,7 @@ Si no sabés cuál sos, **preguntá antes de escribir código**. La matriz de de
 
 ## 2. El proyecto en cinco líneas
 
-**Sistema de Legajos para Fiscalización.** Es para la sección que atiende los casos de **múltiple cedulación**:
+**Fiscalización** — sistema de legajos (nombre interno `legajos`). Es para la sección que atiende los casos de **múltiple cedulación**:
 - un legajo por caso, que agrupa las cédulas (la original y los duplicados), los documentos escaneados (sólo el
   path en la base) y el historial de interacciones con el interesado;
 - usuarios con contraseña y **restricción de IP por usuario**;
