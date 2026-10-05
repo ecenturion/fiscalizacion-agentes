@@ -30,3 +30,5 @@
 {"ts":"2026-10-05T07:35:33-03:00","tarea":"L07a-almacen-y-validacion","estado":"error","agente":"agy"}
 {"ts":"2026-10-05T07:35:33-03:00","tarea":"L07a-almacen-y-validacion","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-05T08:01:02-03:00","tarea":"L07a-almacen-y-validacion","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-05T08:02:12-03:00","tarea":"L07b-documentos","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-05T08:02:12-03:00","tarea":"L07b-documentos","estado":"en_progreso","agente":"agy"}

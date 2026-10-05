@@ -148,3 +148,27 @@ cd legajos && pnpm sistema:check && pnpm verificar
   comillas sale saneado, sin sesión → 401.
 
 Sin `any`, sin `console.log`, `.set()` explícito. Sin commit ni push.
+
+### Corrección 1 (reintento de AGY): el primer intento se cortó con 7 tests en rojo
+**Seguí desde lo que ya escribiste**, sin reescribir desde cero:
+1. **`psql` no está permitido.** Para mirar la base usá un test o `node -e` con `postgres`.
+2. **Los tests usan los fixtures reales** de `test/fixtures/archivos/` (`valido.pdf`, `valido.jpg`, `falso.pdf`,
+   `truncado.jpg`…), copiados a un tmp dentro de `ARCHIVOS_DIR/.tmp` del test. Un "PDF" armado a mano no pasa
+   `qpdf --check`: por eso hoy fallan con `archivo_invalido`.
+3. El fixture de interacción tiene que incluir `fecha` (NOT NULL).
+4. **Faltan casos de la spec**:
+   - 4b: un error **en** el commit deja los finales;
+   - 5: solicitud del mismo tipo → recibida; ya recibida → 409; **concurrencia** de dos subidas sobre la misma
+     solicitud;
+   - 6: reemplazo concurrente → uno sale bien y el otro da 409; reemplazar un anulado → 409; los archivos viejos
+     siguen en disco; la solicitud queda reapuntada;
+   - 8: `path_relativo` adulterado a `../../etc/passwd` y un symlink plantado → error sin leer nada; `vista` y
+     `descarga` auditadas;
+   - 9: aplicación hacia atrás de la obligatoriedad y la vigencia;
+   - 10: vencido / no vencido / sin vigencia, con `now` inyectado.
+
+   Separá el test 9+10 en casos propios.
+5. **Nada de `as unknown as`**, tampoco en los tests. Para el `Request` con stream: `new Request(url, { method:
+   'POST', body: Readable.toWeb(stream) as ReadableStream<Uint8Array>, duplex: 'half' } as RequestInit &
+   { duplex: 'half' })`. Si no tipa, explicá por qué en el informe.
+6. Verificá con `cd legajos && pnpm verificar` hasta exit 0.
