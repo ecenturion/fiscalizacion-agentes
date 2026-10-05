@@ -34,3 +34,6 @@
 {"ts":"2026-10-05T08:02:12-03:00","tarea":"L07b-documentos","estado":"en_progreso","agente":"agy"}
 {"ts":"2026-10-05T08:18:54-03:00","tarea":"L07b-documentos","estado":"error","agente":"agy"}
 {"ts":"2026-10-05T08:18:54-03:00","tarea":"L07b-documentos","estado":"en_progreso","agente":"agy"}
+{"ts":"2026-10-05T08:25:14-03:00","tarea":"L07b-documentos","estado":"error","agente":"agy"}
+{"ts":"2026-10-05T08:25:14-03:00","tarea":"L07b-documentos","estado":"en_progreso","agente":"codex"}
+{"ts":"2026-10-05T08:53:53-03:00","tarea":"L07b-documentos","estado":"hecho","agente":"claude-code"}
