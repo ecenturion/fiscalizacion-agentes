@@ -84,3 +84,8 @@ cd legajos && pnpm lint && docker compose -f compose.test.yml down && docker com
 pnpm db:generate     # "No schema changes"
 ```
 Sin `any`. Sin commit ni push. **No toques** `src/server/servicios/**`, `src/app/**` ni otros tests.
+
+### Decisión del arquitecto (2do despacho)
+La firma pasa a ser **`legajos.corregir_cedula(p_legajo uuid, p_nueva text, p_usuario uuid, p_motivo text, p_ip inet,
+p_auditoria_id uuid)`**. La app genera el UUIDv7 de la fila de auditoría y lo pasa, sin `set_config` ni defaults.
+Continuá desde lo que ya hiciste (schema y snapshot). **La 0003 se escribe a mano según §16.4.5, sin `CASCADE`.**
