@@ -490,3 +490,51 @@ con PostgreSQL 13, que tiene otras bases y no se usa.
   nunca salieron de ahí.
 - firewalld: se agregó `https`. Efecto colateral: el sitio PHP también responde por HTTPS con el mismo contenido.
 - Deploy: `scripts/deploy.sh` desde la PC: build local, `docker save | ssh docker load` y `compose up`.
+
+## 16. Modelo v2: legajo por cédula y trámites (manda sobre §2, §2.1–§2.3, §9.2–§9.5 y §10.1–§10.2 en lo que se opongan)
+
+### 16.1 Tablas
+| Tabla | Columnas | Reglas |
+|---|---|---|
+| `legajo` | cedula (texto, sólo dígitos, **único**), nombres, apellidos, fecha_nacimiento null, fecha_emision null, observacion null, creado_por/en | 1 por número de cédula. **No se anula**; los datos son editables y auditados |
+| `tipo_tramite` | nombre (único sin distinguir mayúsculas), orden, activo | catálogo |
+| `tipo_tramite_documento` | tipo_tramite_id, tipo_documento_id, activo | PK compuesta; define los obligatorios por tipo de trámite |
+| `contador_tramite` | anio pk, ultimo | ex `contador_legajo` |
+| `tramite` | anio, correlativo, numero (generada §9.2), tipo_id, fecha_deteccion, observacion, estado_id, creado_por/en | **no se anula** (para eso está el estado "Archivado") |
+| `tramite_legajo` | tramite_id, legajo_id, es_original, creado_por/en, anulado_* | único `(tramite_id, legajo_id)` vivo; original única **por trámite** (índice parcial vivo); al menos 1 vivo por trámite (servicio) |
+| `interaccion` | **tramite_id** (antes legajo_id), lo demás igual | el trigger de estado actúa sobre `tramite` |
+| `solicitud_documento` | **tramite_id**, interaccion_id, tipo_documento_id, documento_recibido_id | el documento recibido tiene que ser del tipo y de un legajo **vinculado (vivo) al trámite** |
+| `documento` | legajo_id, **tramite_id null** (procedencia), tipo_id, fecha_emision, … | si `tramite_id` no es nulo, el legajo tiene que estar vinculado a ese trámite (trigger). Versiones: mismo legajo y tipo |
+| `tipo_documento` | se elimina `obligatorio` (pasa a `tipo_tramite_documento`) | |
+| `cedula` | **se elimina**: sus datos pasan a `legajo` y la original a `tramite_legajo` | |
+
+### 16.2 Reglas
+- **Alta de trámite**: tipo activo, fecha de detección y **al menos un legajo**, en la misma transacción.
+  - Los legajos se eligen existentes o se crean al vuelo por número de cédula. Si el número ya existe, **se usa el
+    legajo existente**: nunca hay duplicado.
+  - Número `AAAA-NNNN` con el contador atómico (§2.1) y el año en Asunción.
+  - Estado inicial: el activo de menor orden.
+- **Vincular y desvincular** legajos de un trámite: desvincular = anular el vínculo, con motivo y sólo admin. No se
+  puede dejar un trámite sin vínculos vivos.
+- **Marcar original**: dentro del trámite, con `FOR UPDATE` de los vínculos (antes era por legajo).
+- **Faltantes del trámite**: los `tipo_tramite_documento` activos de su tipo sin un **documento vivo de ese tipo en
+  alguno de sus legajos vinculados**, cargado o no en este trámite, porque el legajo es un archivo permanente. Un
+  documento vencido no cuenta como faltante; el aviso sigue estando sólo en el visor.
+- **Legajo**: muestra sus datos, todos sus documentos (con el trámite de procedencia) y sus trámites (número, tipo,
+  estado, con la marca original o duplicado en cada uno). **Relacionados** = otros legajos que comparten algún
+  trámite vivo.
+- **Búsqueda**:
+  - legajos por número de cédula (prefijo) o por nombre o apellido (sin acentos);
+  - trámites por número `AAAA-NNNN`, tipo, estado o cédula vinculada.
+- Se mantiene todo lo de auth, IP, archivos, auditoría y admin. El admin suma el catálogo de tipos de trámite con
+  sus documentos obligatorios.
+- **Permisos nuevos**: `tramite.ver`, `tramite.crear`, `tramite.editar` y `tramite.vincular` (operador sí);
+  `tramite.desvincular` (sólo admin). `legajo.*` se conserva para el archivo.
+
+### 16.3 Migración
+- **0003**, incremental. Producción no tiene datos de negocio: sólo admin, accesos y auditoría.
+- Crea las tablas nuevas, traslada FKs, elimina `cedula`, `tipo_documento.obligatorio` y las columnas de caso de
+  `legajo`, renombra el contador, y rehace triggers y grants por columna. Siembra "Múltiple cedulación" como tipo
+  de trámite inicial.
+- Antes de aplicarla en producción: `pg_dump`. La migración **falla a propósito** si encuentra filas en `legajo`,
+  `cedula`, `documento` o `interaccion`, como red de seguridad.

@@ -105,3 +105,18 @@ Despliegue en el servidor de la institución: a definir si es con Docker o con N
 ## 6. Pendiente de confirmar con la institución (no bloquea el desarrollo)
 - ¿Se permite Docker? ¿Hay HTTPS interno o un proxy propio?
 - Propuesta de base: Nginx delante como único punto de entrada, y la app escuchando sólo en `127.0.0.1`.
+
+## 7. Corrección del modelo (2026-10-05) — reemplaza §2.1, §2.2 y lo que se oponga
+Emilio: *"el legajo es el archivo que pertenece a una cédula; una cédula puede tener trámites, y eso puede ir
+anexando documentos a su legajo"*. Respuestas confirmadas:
+- **Legajo = el archivo de un número de cédula** (1 a 1). Contiene los datos de esa cédula: nombres, apellidos,
+  nacimiento, emisión y observación, y **todos** sus documentos, para siempre.
+- **"Original y duplicados" son números de cédula distintos de la misma persona** (múltiple cedulación).
+- **Trámite** = una actuación. **Vincula uno o varios legajos** (el caso de múltiple cedulación vincula todas las
+  cédulas de la persona) y **marca en el trámite** cuál es la original (como máximo una).
+- **El trámite tiene** la numeración automática `AAAA-NNNN`, la fecha de detección, el **estado** (catálogo), el
+  **historial de interacciones** y las **solicitudes de documentos**. El legajo no tiene estado.
+- **Tipos de trámite**: un catálogo del admin. Cada tipo define **qué tipos de documento son obligatorios**, y los
+  faltantes se calculan por trámite.
+- **Documentos**: se guardan **en el legajo** e indican **de qué trámite vienen**, si vinieron de uno. En un trámite
+  con varias cédulas, al subir se elige a qué legajo va.
