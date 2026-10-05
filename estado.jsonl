@@ -56,3 +56,6 @@
 {"ts":"2026-10-05T15:25:09-03:00","tarea":"M1-base-v2","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-05T15:32:26-03:00","tarea":"M1-base-v2","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-05T15:43:59-03:00","tarea":"M1-base-v2","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-05T15:44:42-03:00","tarea":"M2a-servicios-legajo-tramite","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-05T15:44:42-03:00","tarea":"M2a-servicios-legajo-tramite","estado":"en_progreso","agente":"codex"}
+{"ts":"2026-10-05T15:58:54-03:00","tarea":"M2a-servicios-legajo-tramite","estado":"hecho","agente":"claude-code"}
