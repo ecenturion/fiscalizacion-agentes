@@ -68,3 +68,6 @@
 {"ts":"2026-10-05T17:10:15-03:00","tarea":"M4-catalogos-operativos","estado":"en_progreso","agente":"claude-code"}
 {"ts":"2026-10-05T17:10:15-03:00","tarea":"M4-catalogos-operativos","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-05T17:22:51-03:00","tarea":"M4-catalogos-operativos","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-05T19:35:19-03:00","tarea":"M5-recuperar-admin-docker","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-05T19:35:19-03:00","tarea":"M5-recuperar-admin-docker","estado":"en_progreso","agente":"codex"}
+{"ts":"2026-10-05T19:46:01-03:00","tarea":"M5-recuperar-admin-docker","estado":"hecho","agente":"claude-code"}
