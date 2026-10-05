@@ -591,3 +591,16 @@ con PostgreSQL 13, que tiene otras bases y no se usa.
    12. seed de "Múltiple cedulación" con UUID fijo.
 
    Todo en **una transacción**. Antes, en producción: app detenida y `pg_dump`.
+
+### 16.5 Puesta en producción del modelo v2 (2026-10-05)
+1. App detenida.
+2. Backup: `/srv/fiscalizacion/backups/pre-v2-20261005-164332.sql.gz` (permisos 600).
+3. Se borró el legajo de prueba `2026-0001` (cédula 2425094, "nn nn"), con autorización de Emilio.
+4. Deploy de `304f63e`: la 0003 se aplicó al arrancar.
+
+Verificado:
+- 4 migraciones;
+- `tipo_tramite` = "Múltiple cedulación";
+- `cedula` eliminada;
+- grants v2 (sin UPDATE de `estado_id` ni de `cedula`; `corregir_cedula` sólo app);
+- admin y sus 2 IPs intactos.
