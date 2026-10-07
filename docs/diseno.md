@@ -667,3 +667,17 @@ Verificado:
 - **A vigilar:**
   - el contenedor `db` llega a ~203/256 MB después de la copia;
   - el disco quedó en 71% (8,5 GB libres); cada copia necesita ~2,5 GB temporales.
+
+## 18. Validación de PDF ajustada a PDFs reales (2026-10-07) — reemplaza §13.2
+Un PDF válido de Emilio se rechazó en producción. Las causas, confirmadas localmente:
+- `qpdf --check` devuelve **3** con advertencias recuperables, como una `startxref` o una xref dañada;
+- `--is-encrypted` marca como cifrados los PDFs con **restricciones** (sin clave para abrir).
+
+Regla nueva:
+- `--check`: se acepta 0 o 3, **salvo** que las advertencias digan "unexpected EOF" o "unable to find trailer
+  dictionary" (PDF cortado);
+- `--requires-password`: 2 (sin cifrar) o 3 (cifrado, pero abre sin contraseña) → ok; 0 (pide contraseña) → 422;
+- `--show-npages`: 0 o 3.
+
+Fixtures nuevos: `restringido.pdf` y `advertencias.pdf`, que se aceptan. Verificado también dentro de la imagen
+(qpdf 11.3).
