@@ -650,3 +650,20 @@ Verificado:
 - `/legajos/nuevo?cedula=X` precarga los datos del padrón.
 - En el legajo se agrega un bloque "Estado en identificación": habilitada o cancelada (con sus datos) y la
   habilitante.
+
+### 17.4 Puesta en producción del padrón (2026-10-07)
+- **Credencial:** `/srv/fiscalizacion/.env-padron` (600), generada desde `cta/config.php` con PHP en el servidor,
+  sin mostrar la clave.
+- **Primera copia `ok`** (12:24–12:32 UTC, 8 min):
+  - persona: 8.745.100, con 1 descartada por normalización;
+  - cedula_dupl: 20.958;
+  - cancelacion: 538;
+  - `padron` ocupa 1,24 GB.
+- **Dos fallos previos**, que no afectaron nada porque la copia hace rollback. Los tests no los vieron porque el
+  fixture usaba tipos supuestos; ahora replica `information_schema` de `verificacion`.
+  - `ic_feccar` es texto en el origen → 0005;
+  - `id_cedulas_dupl` es NULL en todas las filas → 0006.
+- **Cron:** `/etc/cron.d/fiscalizacion-padron`, a las 02:00. Log en `/var/log/fiscalizacion-padron.log`.
+- **A vigilar:**
+  - el contenedor `db` llega a ~203/256 MB después de la copia;
+  - el disco quedó en 71% (8,5 GB libres); cada copia necesita ~2,5 GB temporales.
