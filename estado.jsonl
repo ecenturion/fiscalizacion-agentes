@@ -74,3 +74,6 @@
 {"ts":"2026-10-07T08:18:19-03:00","tarea":"P1-padron-y-consulta","estado":"en_progreso","agente":"claude-code"}
 {"ts":"2026-10-07T08:18:19-03:00","tarea":"P1-padron-y-consulta","estado":"en_progreso","agente":"codex"}
 {"ts":"2026-10-07T08:39:07-03:00","tarea":"P1-padron-y-consulta","estado":"hecho","agente":"claude-code"}
+{"ts":"2026-10-07T08:39:13-03:00","tarea":"P2-pantalla-consulta","estado":"en_progreso","agente":"claude-code"}
+{"ts":"2026-10-07T08:39:13-03:00","tarea":"P2-pantalla-consulta","estado":"en_progreso","agente":"opencode"}
+{"ts":"2026-10-07T09:16:34-03:00","tarea":"P2-pantalla-consulta","estado":"hecho","agente":"claude-code"}
