@@ -141,3 +141,8 @@ consulta y sus datos, y sumar el acceso al legajo y la carga del trámite.
   - **"Cargar trámite"**: "Nuevo trámite" de Múltiple cedulación con la **habilitante como original** y **todas sus
     duplicadas precargadas**, que se pueden destildar. Si son más de 20, avisa. Si una cancelada no tiene
     habilitante cargada, se carga sola con la original "sin determinar".
+
+## 9. Cédula con letra (2026-10-07)
+Emilio: **la letra es parte del número de cédula**. Regla: dígitos sin ceros a la izquierda más una letra final
+opcional, guardada en mayúscula (`0123456a` → `123456A`). Aplica a legajos, a la corrección de la cédula, a las
+búsquedas y a la consulta. En el padrón hay 2.627 casos, siempre con una única letra final.
