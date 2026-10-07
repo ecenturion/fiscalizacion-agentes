@@ -120,3 +120,24 @@ anexando documentos a su legajo"*. Respuestas confirmadas:
   faltantes se calculan por trámite.
 - **Documentos**: se guardan **en el legajo** e indican **de qué trámite vienen**, si vinieron de uno. En un trámite
   con varias cédulas, al subir se elige a qué legajo va.
+
+## 8. Consulta de cédula (reemplaza a `cta`) — 2026-10-07
+Emilio: Fiscalización **reemplaza** la consulta `cta` (`/var/www/html/cta`, PHP sin login). Hay que replicar su
+consulta y sus datos, y sumar el acceso al legajo y la carga del trámite.
+- **Consulta por número de cédula**, con estos datos:
+  - del ciudadano: cédula, nombres, apellidos, prontuario, sexo, IC (oficina, fecha de inscripción, folio, tomo y
+    acta), fecha y lugar de nacimiento;
+  - si está **cancelada**: los datos de la cancelación y la **cédula habilitante**.
+- **Fuentes** (base `verificacion` del servidor):
+  - `personas` (padrón, unos 8,7 millones);
+  - `cedulas_dupl` (20.958 canceladas con su `cedula_habil`; es la que usa `cta`);
+  - `cancelacion_personas` (538 cancelaciones nuevas, con cédula confirmada, estado PROCESADA o DEVUELTA, comentario
+    y número y fecha de nota). **Se muestran las dos fuentes.**
+- **Copia propia en Fiscalización**, que se actualiza periódicamente. Para la copia se usa el usuario de `cta`
+  (`verificaciones`), por decisión de Emilio aunque es superusuario. La credencial sólo la tiene el proceso de copia
+  del servidor: **nunca** la app web.
+- Desde el resultado:
+  - **"Ver legajo"** si la cédula ya tiene legajo; si no, **"Crear legajo"** con los datos del padrón;
+  - **"Cargar trámite"**: "Nuevo trámite" de Múltiple cedulación con la **habilitante como original** y **todas sus
+    duplicadas precargadas**, que se pueden destildar. Si son más de 20, avisa. Si una cancelada no tiene
+    habilitante cargada, se carga sola con la original "sin determinar".

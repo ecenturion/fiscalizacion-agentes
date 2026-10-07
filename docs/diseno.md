@@ -604,3 +604,49 @@ Verificado:
 - `cedula` eliminada;
 - grants v2 (sin UPDATE de `estado_id` ni de `cedula`; `corregir_cedula` sólo app);
 - admin y sus 2 IPs intactos.
+
+## 17. Padrón y consulta de cédula (reemplazo de `cta`)
+
+### 17.1 Copia del padrón (esquema `padron`, de `legajos_owner`)
+| Tabla | Origen | Columnas | Índices |
+|---|---|---|---|
+| `padron.persona` | `verificacion.personas` | cedula (como viene), cedula_norm (sin ceros a la izquierda), nombres, apellidos, prontuario, sexo, ic_ofnac, ic_feccar, ic_folio, ic_tomo, ic_acta, fech_nacim, lugar_nacim, activo | PK `cedula_norm` |
+| `padron.cedula_dupl` | `verificacion.cedulas_dupl` | id_cedulas_dupl, cedula, cedula_norm, cedula_habil, cedula_habil_norm, nombres, apellidos, prontuario, sexo, ic_*, fech_nacim, lugar_nacim, func_insert, fech_insert, obs_insert | `cedula_norm`, `cedula_habil_norm` |
+| `padron.cancelacion` | `verificacion.cancelacion_personas` | id_cancelacion, cedula_cancelada(+_norm), cedula_confirmada(+_norm), fecha_cancelacion, usuario_cancelacion, comentario, estado_cancelacion, nro_nota, fecha_nota | `cedula_cancelada_norm`, `cedula_confirmada_norm` |
+| `padron.sincronizacion` | — | id, inicio, fin, resultado (`ok`/`error`), filas_persona, filas_dupl, filas_cancelacion, detalle | append-only |
+
+- `legajos_app`: **sólo SELECT** sobre `padron.*`. No tiene INSERT ni UPDATE.
+- **Copia completa**, porque `personas` no tiene fecha de modificación. Pasos:
+  1. cargar en tablas `*_carga` con `COPY` en stream;
+  2. normalizar `cedula_norm`;
+  3. crear los índices;
+  4. en una transacción corta: `DROP` de las tablas viejas, `RENAME` de `*_carga` y re-grant.
+
+  Si algo falla, quedan las tablas anteriores intactas y se registra el `error`.
+- **Script de host** `deploy/padron-sync.sh`:
+  - credenciales en `/srv/fiscalizacion/.env-padron` (600, root): `VERIF_HOST`, `VERIF_PORT`, `VERIF_DB`,
+    `VERIF_USER` y `VERIF_PASSWORD`;
+  - `psql … -c "\copy (SELECT columnas) TO STDOUT"` | `docker compose exec -T db psql -U legajos_owner -c "\copy
+    padron.X_carga FROM STDIN"`;
+  - toma el `flock` de mantenimiento;
+  - cron diario a las 02:00. **Nunca** se monta en el contenedor de la app.
+
+### 17.2 Servicio `consultarCedula(ctx, { cedula })` (permiso nuevo `consulta.cedula`, todos los roles)
+- Normaliza la cédula y devuelve:
+  - `persona`: el padrón, o los datos de `cedula_dupl` si no está en `persona` (como `cta`);
+  - `cancelaciones[]`: de las **dos** fuentes, con `fuente`, fecha, funcionario o usuario, observación o
+    comentario, estado, nota y fecha de nota, y la `habilitante`;
+  - `habilitante`: si la consultada está cancelada, su `cedula_habil`/`cedula_confirmada`; si no, ella misma
+    (si figura como habilitante de otras);
+  - `duplicadas[]`: todas las canceladas de esa habilitante, de las dos fuentes, sin repetir, con nombre si está;
+  - `legajos`: para la consultada, la habilitante y las duplicadas, si ya tienen legajo en Fiscalización (`legajoId`);
+  - `sincronizadoEn`: la fecha de la última copia `ok`.
+- Audita `vista` con la cédula consultada: es un dato personal. **Una consulta por fuente.**
+
+### 17.3 Prefill
+- `/tramites/nuevo?cedula=X` arma el formulario con la habilitante (original) y las duplicadas, todas tildadas.
+  Toma los datos del padrón para los legajos nuevos. Si son más de 20, avisa. Sin habilitante: sólo X, con la
+  original sin determinar.
+- `/legajos/nuevo?cedula=X` precarga los datos del padrón.
+- En el legajo se agrega un bloque "Estado en identificación": habilitada o cancelada (con sus datos) y la
+  habilitante.
